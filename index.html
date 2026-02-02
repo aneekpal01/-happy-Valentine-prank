@@ -42,6 +42,24 @@
             display: none;
         }
 
+        .share-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            flex-direction: column;
+        }
+
+        .share-overlay.hidden {
+            display: none;
+        }
+
         .name-box {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 30px;
@@ -543,7 +561,20 @@
             <p>Apne special someone ka naam likho:</p>
             <input type="text" class="name-input" id="nameInput" placeholder="Naam likho yahan..." maxlength="20">
             <br>
-            <button class="name-submit" onclick="startCard()">Start Card 💝</button>
+            <button class="name-submit" onclick="generateShareLink()">Create Card 💝</button>
+        </div>
+    </div>
+
+    <!-- Share Link Overlay -->
+    <div class="share-overlay hidden" id="shareOverlay">
+        <div class="name-box">
+            <h2>🎉 Card Ready! 🎉</h2>
+            <p>Yeh link apne <span id="partnerNameDisplay" style="color:#e91e63; font-weight:bold;"></span> ko bhejo:</p>
+            <input type="text" class="name-input" id="shareLinkInput" readonly style="font-size:0.85rem; cursor:pointer;" onclick="copyLink()">
+            <br>
+            <button class="name-submit" onclick="copyLink()">📋 Copy Link</button>
+            <p style="margin-top:15px; font-size:0.9rem; color:#888;">Ya phir preview dekho:</p>
+            <button class="name-submit" style="background: linear-gradient(135deg, #a8a8a8 0%, #888888 100%); margin-top:10px;" onclick="showPreview()">👀 Preview Card</button>
         </div>
     </div>
 
@@ -610,23 +641,87 @@
         // Emoji stages based on rejection - gets sadder!
         const emojiStages = ['💖', '💗', '💓', '🥺', '😢', '😭', '💔', '🖤'];
         
-        // Name input handling
-        function startCard() {
-            const nameInput = document.getElementById('nameInput').value.trim();
-            userName = nameInput || "Sweetheart";
+        // Check URL for name parameter - Direct link support!
+        function checkUrlForName() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const nameFromUrl = urlParams.get('name');
             
+            if (nameFromUrl) {
+                // Name found in URL - GF is opening the link!
+                // Skip ALL popups and show card directly!
+                userName = decodeURIComponent(nameFromUrl);
+                document.getElementById('displayName').textContent = userName + ",";
+                document.getElementById('congratsName').textContent = userName + " & You Forever! 💕";
+                document.getElementById('nameOverlay').classList.add('hidden');
+                document.getElementById('shareOverlay').classList.add('hidden');
+                
+                // Auto-start music after a small delay
+                setTimeout(() => {
+                    startMusic();
+                }, 500);
+            }
+        }
+        
+        // Run on page load
+        checkUrlForName();
+        
+        // Generate shareable link (for the boyfriend/sender)
+        function generateShareLink() {
+            const nameInput = document.getElementById('nameInput').value.trim();
+            if (!nameInput) {
+                alert('Please enter a name! 🥺');
+                return;
+            }
+            
+            userName = nameInput;
+            
+            // Generate the shareable link
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareLink = baseUrl + '?name=' + encodeURIComponent(userName);
+            
+            // Show share overlay
+            document.getElementById('nameOverlay').classList.add('hidden');
+            document.getElementById('shareOverlay').classList.remove('hidden');
+            document.getElementById('partnerNameDisplay').textContent = userName;
+            document.getElementById('shareLinkInput').value = shareLink;
+        }
+        
+        // Copy link to clipboard
+        function copyLink() {
+            const linkInput = document.getElementById('shareLinkInput');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile
+            
+            navigator.clipboard.writeText(linkInput.value).then(() => {
+                alert('✅ Link copied! Ab ' + userName + ' ko bhej do! 💕');
+            }).catch(() => {
+                // Fallback
+                document.execCommand('copy');
+                alert('✅ Link copied! Ab ' + userName + ' ko bhej do! 💕');
+            });
+        }
+        
+        // Show preview of card
+        function showPreview() {
             document.getElementById('displayName').textContent = userName + ",";
             document.getElementById('congratsName').textContent = userName + " & You Forever! 💕";
-            document.getElementById('nameOverlay').classList.add('hidden');
+            document.getElementById('shareOverlay').classList.add('hidden');
             
-            // Try to start music
-            toggleMusic();
+            // Start music
+            setTimeout(() => {
+                startMusic();
+            }, 500);
+        }
+        
+        // Old startCard function (kept for compatibility)
+        function startCard() {
+            generateShareLink();
         }
 
         // Enter key support for name input
         document.getElementById('nameInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                startCard();
+                generateShareLink();
             }
         });
 
